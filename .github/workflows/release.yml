@@ -1,0 +1,104 @@
+name: Release Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_channel:
+        description: 'Type of release'
+        required: true
+        type: choice
+        options:
+        - Alpha
+        - Beta
+        - Dev
+        - Release
+      release_version:
+        description: 'Version of release (e.g. 1.0.3), make sure to use semver (https://semver.org/) and PLEASE double check that the program has the same version'
+        required: true
+        type: string
+      release_summary:
+        description: 'Quick summary of release to append to title'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
+
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install --prefer-binary -r Src/requirements.txt
+
+      - name: Update version in Python file
+        run: |
+          $file = "Src/main.py"
+          (Get-Content $file) | ForEach-Object {
+              if ($_ -match '^CURRENT_VERSION =') {
+                  'CURRENT_VERSION = "' + '${{ github.event.inputs.release_version }}' + '"'
+              } else {
+                  $_
+              }
+          } | Set-Content $file
+
+
+      - name: Run PyInstaller
+        run: |
+          python -m PyInstaller --clean --log-level=DEBUG main.spec
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LYTE_Build
+          path: dist/LYTE.exe
+      - name: Set release flags
+        id: flags
+        run: |
+          $channel = "${{ github.event.inputs.release_channel }}"
+          if ($channel -eq "Release") {
+            "prerelease=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "draft=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } elseif ($channel -eq "Alpha" -or $channel -eq "Beta") {
+            "prerelease=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "draft=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
+            # Dev release
+            "prerelease=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "draft=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          }
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.release_version }}-${{ github.event.inputs.release_channel }}
+          name: "[${{ github.event.inputs.release_channel }}] v${{ github.event.inputs.release_version }} - ${{ github.event.inputs.release_summary }}"
+          body: |
+            ## What's New:
+            ### Features:
+            - 
+            ### Under The Hood:
+            - 
+            ## Bugs Squashed:
+            - 
+            
+            ## Other Notes:
+            - 
+            
+            ## New Contributors:
+            - 
+          files: dist/LYTE.exe
+          draft: ${{ steps.flags.outputs.draft }}
+          prerelease: ${{ steps.flags.outputs.prerelease }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
