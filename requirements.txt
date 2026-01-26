@@ -1,0 +1,6 @@
+sounddevice
+soundfile
+torch
+qwen-tts
+flash-attn --no-build-isolation
+torch torchvision --index-url https://download.pytorch.org/whl/cu130
