@@ -1,10 +1,12 @@
+# Requirements for building the executable
+# Install these before building with PyInstaller
+
 # Core dependencies
 numpy
 sounddevice
 soundfile
-Pillow  # Required by transformers/torchvision
 
-# PyTorch (install based on your CUDA version)
+# PyTorch - Choose based on your system:
 # For CUDA 11.8:
 # torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 # For CUDA 12.1:
@@ -15,8 +17,6 @@ Pillow  # Required by transformers/torchvision
 # Qwen TTS
 qwen-tts
 
-# Optional: Flash Attention (for faster GPU inference)
-# flash-attn --no-build-isolation
-
-# For building executable
+# PyInstaller for building executable
 pyinstaller
+

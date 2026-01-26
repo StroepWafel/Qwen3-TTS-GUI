@@ -1,2 +1,5 @@
 *.pt
 *.wav
+/build
+/dist
+/src/__pycache__
