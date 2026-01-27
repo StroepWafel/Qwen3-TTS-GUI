@@ -22,49 +22,6 @@ Run the GUI application:
 python src/qwen_tts_gui.py
 ```
 
-## Building an Executable
-
-To create a standalone `.exe` file (Windows) or executable (Linux/Mac):
-
-### Prerequisites
-1. Install PyInstaller:
-```bash
-pip install pyinstaller
-```
-
-2. Install all dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-### Building
-
-**Windows:**
-```bash
-build_exe.bat
-```
-
-**Linux/Mac:**
-```bash
-chmod +x build_exe.sh
-./build_exe.sh
-```
-
-**Or manually:**
-```bash
-python -m PyInstaller qwen_tts_gui.spec
-```
-
-**Note:** If you get an error that `pyinstaller` is not recognized, use `python -m PyInstaller` instead.
-
-The executable will be created in the `dist` folder.
-
-### Notes for Building
-- The build process may take several minutes due to the large PyTorch dependencies
-- The resulting executable will be large (several GB) due to PyTorch and model dependencies
-- Ensure you have enough disk space (at least 5-10 GB free)
-- The first model download will happen when you first run the executable
-
 ## How to Use
 
 ### Training a Voice
