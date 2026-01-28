@@ -1,4 +1,4 @@
-name: Release Workflow
+name: build Workflow
 
 on:
   workflow_dispatch:
@@ -72,36 +72,3 @@ jobs:
           name: QwenTTS_GUI_Build
           path: dist/QwenTTS_GUI.exe
           retention-days: 7
-          
-      - name: Set release flags
-        id: flags
-        run: |
-          $channel = "${{ github.event.inputs.release_channel }}"
-          if ($channel -eq "Release") {
-            "prerelease=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            "draft=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          } elseif ($channel -eq "Alpha" -or $channel -eq "Beta") {
-            "prerelease=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            "draft=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          } else {
-            # Dev release
-            "prerelease=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            "draft=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          }
-          
-      - name: Generate and Create Release
-        id: release
-        uses: stroepwafel/ai-release-notes@v1.0.0
-        with:
-          groq_api_key: ${{ secrets.GROQ_API_KEY }}
-          tag_name: v${{ github.event.inputs.release_version }}-${{ github.event.inputs.release_channel }}
-          release_name: "[${{ github.event.inputs.release_channel }}] v${{ github.event.inputs.release_version }} - ${{ github.event.inputs.release_summary }}"
-          draft: ${{ steps.flags.outputs.draft }}
-          prerelease: ${{ steps.flags.outputs.prerelease }}
-          files: dist/QwenTTS_GUI.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Display Release URL
-        run: |
-          echo "Release created: ${{ steps.release.outputs.release_url }}"
