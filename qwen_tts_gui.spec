@@ -186,6 +186,7 @@ try:
     # Common CUDA DLLs that PyTorch needs
     cuda_dlls = [
         'cudart*.dll',
+        'cublas*.dll',
         'curand*.dll',
         'cusparse*.dll',
         'cusolver*.dll',
