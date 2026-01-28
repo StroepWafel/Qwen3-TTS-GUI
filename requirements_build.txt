@@ -20,3 +20,4 @@ qwen-tts
 # PyInstaller for building executable
 pyinstaller
 
+

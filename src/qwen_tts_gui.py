@@ -293,10 +293,31 @@ class QwenTTSGUI:
             
             # Load model
             config = self.get_model_config(device_type, show_warning=True)
-            model = Qwen3TTSModel.from_pretrained(
-                "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
-                **config
-            )
+            try:
+                model = Qwen3TTSModel.from_pretrained(
+                    "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+                    **config
+                )
+            except (RuntimeError, torch.cuda.CudaError) as cuda_error:
+                # Check if it's a CUDA compatibility error
+                error_str = str(cuda_error).lower()
+                if "cuda" in error_str and ("kernel" in error_str or "no kernel image" in error_str or "device" in error_str):
+                    # CUDA error - fall back to CPU
+                    device_type = "cpu"  # Update device_type for fallback
+                    self.root.after(0, lambda: self.train_status_label.config(
+                        text="CUDA error detected, falling back to CPU...", foreground="orange"))
+                    self.root.after(0, lambda: messagebox.showwarning(
+                        "CUDA Compatibility Issue",
+                        f"CUDA error detected: {str(cuda_error)}\n\nFalling back to CPU mode. Training may be slower."))
+                    # Retry with CPU config
+                    config = self.get_model_config("cpu", show_warning=False)
+                    model = Qwen3TTSModel.from_pretrained(
+                        "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+                        **config
+                    )
+                else:
+                    # Re-raise if it's not a CUDA compatibility error
+                    raise
             
             ref_audio = None
             ref_text = None
@@ -332,11 +353,38 @@ class QwenTTSGUI:
                 text="Creating voice clone prompt...", foreground="blue"))
             
             # Generate voice clone prompt
-            prompt_items = model.create_voice_clone_prompt(
-                ref_audio=ref_audio,
-                ref_text=ref_text,
-                x_vector_only_mode=False,
-            )
+            try:
+                prompt_items = model.create_voice_clone_prompt(
+                    ref_audio=ref_audio,
+                    ref_text=ref_text,
+                    x_vector_only_mode=False,
+                )
+            except (RuntimeError, torch.cuda.CudaError) as cuda_error:
+                # Check if it's a CUDA compatibility error during operation
+                error_str = str(cuda_error).lower()
+                if "cuda" in error_str and ("kernel" in error_str or "no kernel image" in error_str or "device" in error_str):
+                    # CUDA error during operation - reload model on CPU and retry
+                    device_type = "cpu"  # Update device_type for fallback
+                    self.root.after(0, lambda: self.train_status_label.config(
+                        text="CUDA error during processing, retrying on CPU...", foreground="orange"))
+                    self.root.after(0, lambda: messagebox.showwarning(
+                        "CUDA Compatibility Issue",
+                        f"CUDA error during processing: {str(cuda_error)}\n\nReloading model on CPU and retrying. Training may be slower."))
+                    # Reload model with CPU config
+                    config = self.get_model_config("cpu", show_warning=False)
+                    model = Qwen3TTSModel.from_pretrained(
+                        "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+                        **config
+                    )
+                    # Retry the operation
+                    prompt_items = model.create_voice_clone_prompt(
+                        ref_audio=ref_audio,
+                        ref_text=ref_text,
+                        x_vector_only_mode=False,
+                    )
+                else:
+                    # Re-raise if it's not a CUDA compatibility error
+                    raise
             
             # Determine save location
             save_folder = self.train_save_entry.get().strip()
@@ -397,10 +445,31 @@ class QwenTTSGUI:
             config = self.get_model_config(device_type, show_warning=True)
             
             # Load model
-            model = Qwen3TTSModel.from_pretrained(
-                "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
-                **config
-            )
+            try:
+                model = Qwen3TTSModel.from_pretrained(
+                    "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+                    **config
+                )
+            except (RuntimeError, torch.cuda.CudaError) as cuda_error:
+                # Check if it's a CUDA compatibility error
+                error_str = str(cuda_error).lower()
+                if "cuda" in error_str and ("kernel" in error_str or "no kernel image" in error_str or "device" in error_str):
+                    # CUDA error - fall back to CPU
+                    device_type = "cpu"  # Update device_type for fallback
+                    self.root.after(0, lambda: self.use_status_label.config(
+                        text="CUDA error detected, falling back to CPU...", foreground="orange"))
+                    self.root.after(0, lambda: messagebox.showwarning(
+                        "CUDA Compatibility Issue",
+                        f"CUDA error detected: {str(cuda_error)}\n\nFalling back to CPU mode. Generation may be slower."))
+                    # Retry with CPU config
+                    config = self.get_model_config("cpu", show_warning=False)
+                    model = Qwen3TTSModel.from_pretrained(
+                        "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+                        **config
+                    )
+                else:
+                    # Re-raise if it's not a CUDA compatibility error
+                    raise
             
             self.root.after(0, lambda: self.use_status_label.config(
                 text="Loading voice...", foreground="blue"))
@@ -447,11 +516,38 @@ class QwenTTSGUI:
                 text="Generating speech...", foreground="blue"))
             
             # Generate speech
-            wavs, sr = model.generate_voice_clone(
-                text=text,
-                language="English",
-                voice_clone_prompt=prompt_items,
-            )
+            try:
+                wavs, sr = model.generate_voice_clone(
+                    text=text,
+                    language="English",
+                    voice_clone_prompt=prompt_items,
+                )
+            except (RuntimeError, torch.cuda.CudaError) as cuda_error:
+                # Check if it's a CUDA compatibility error during generation
+                error_str = str(cuda_error).lower()
+                if "cuda" in error_str and ("kernel" in error_str or "no kernel image" in error_str or "device" in error_str):
+                    # CUDA error during generation - reload model on CPU and retry
+                    device_type = "cpu"  # Update device_type for fallback
+                    self.root.after(0, lambda: self.use_status_label.config(
+                        text="CUDA error during generation, retrying on CPU...", foreground="orange"))
+                    self.root.after(0, lambda: messagebox.showwarning(
+                        "CUDA Compatibility Issue",
+                        f"CUDA error during generation: {str(cuda_error)}\n\nReloading model on CPU and retrying. Generation may be slower."))
+                    # Reload model with CPU config
+                    config = self.get_model_config("cpu", show_warning=False)
+                    model = Qwen3TTSModel.from_pretrained(
+                        "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+                        **config
+                    )
+                    # Retry the generation
+                    wavs, sr = model.generate_voice_clone(
+                        text=text,
+                        language="English",
+                        voice_clone_prompt=prompt_items,
+                    )
+                else:
+                    # Re-raise if it's not a CUDA compatibility error
+                    raise
             
             # Determine save location
             save_folder = self.use_save_entry.get().strip()
