@@ -176,6 +176,35 @@ try:
 except:
     pass
 
+# Explicitly collect CUDA DLLs from PyTorch installation
+# PyInstaller sometimes misses these, causing CUDA to not be detected
+try:
+    import torch
+    torch_path = os.path.dirname(torch.__file__)
+    cuda_lib_path = os.path.join(torch_path, 'lib')
+    
+    # Common CUDA DLLs that PyTorch needs
+    cuda_dlls = [
+        'cudart*.dll',
+        'curand*.dll',
+        'cusparse*.dll',
+        'cusolver*.dll',
+        'cudnn*.dll',
+        'nvrtc*.dll',
+        'nvjitlink*.dll',
+    ]
+    
+    # Collect CUDA DLLs if they exist
+    if os.path.exists(cuda_lib_path):
+        import glob
+        for pattern in cuda_dlls:
+            dll_files = glob.glob(os.path.join(cuda_lib_path, pattern))
+            for dll_file in dll_files:
+                binaries.append((dll_file, 'torch/lib'))
+except Exception as e:
+    # If CUDA DLLs aren't found, that's okay - might be CPU-only build
+    pass
+
 a = Analysis(
     ['src/qwen_tts_gui.py'],
     pathex=[],
@@ -224,4 +253,7 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=None,  # Add path to .ico file if you have one
+    # Ensure DLLs are accessible - don't bundle into onefile if CUDA DLLs are needed
+    # onefile=True bundles everything, but DLLs might not be found
+    # onefile=False creates a folder with DLLs accessible
 )

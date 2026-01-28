@@ -8,6 +8,35 @@ from qwen_tts import Qwen3TTSModel
 from qwen_tts.inference.qwen3_tts_model import VoiceClonePromptItem
 import threading
 import os
+import sys
+
+# Fix CUDA detection in PyInstaller bundles
+# PyInstaller sometimes doesn't properly detect CUDA libraries
+if getattr(sys, 'frozen', False):
+    # Running as compiled executable
+    # Add PyInstaller's temporary directory to PATH so CUDA DLLs can be found
+    if hasattr(sys, '_MEIPASS'):
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        # Add torch/lib subdirectory to PATH for CUDA DLLs (highest priority)
+        torch_lib_path = os.path.join(sys._MEIPASS, 'torch', 'lib')
+        if os.path.exists(torch_lib_path):
+            # Add to front of PATH so it's checked first
+            current_path = os.environ.get('PATH', '')
+            os.environ['PATH'] = torch_lib_path + os.pathsep + current_path
+        
+        # Also add the main _MEIPASS directory
+        current_path = os.environ.get('PATH', '')
+        if sys._MEIPASS not in current_path:
+            os.environ['PATH'] = sys._MEIPASS + os.pathsep + current_path
+        
+        # Force PyTorch to re-check CUDA availability after PATH update
+        # This helps if CUDA DLLs weren't found initially
+        try:
+            import torch._C
+            # Trigger CUDA initialization by checking availability
+            _ = torch.cuda.is_available()
+        except Exception:
+            pass  # CUDA might not be available, that's okay
 
 SAMPLE_RATE = 44100
 CHANNELS = 1
@@ -244,10 +273,23 @@ class QwenTTSGUI:
         """Get model configuration based on device type"""
         # Check if CUDA is requested but not available
         if device_type == "cuda" and not torch.cuda.is_available():
+            # Provide detailed diagnostic information
+            cuda_info = []
+            cuda_info.append(f"PyTorch version: {torch.__version__}")
+            cuda_info.append(f"CUDA available: {torch.cuda.is_available()}")
+            if hasattr(torch.version, 'cuda'):
+                cuda_info.append(f"PyTorch CUDA version: {torch.version.cuda}")
+            if hasattr(sys, '_MEIPASS'):
+                cuda_info.append(f"Running as bundled executable")
+                torch_lib = os.path.join(sys._MEIPASS, 'torch', 'lib')
+                cuda_info.append(f"Torch lib path exists: {os.path.exists(torch_lib)}")
+            else:
+                cuda_info.append(f"Running as Python script")
+            
             if show_warning:
+                info_msg = "CUDA is not available. Falling back to CPU mode.\n\n" + "\n".join(cuda_info)
                 self.root.after(0, lambda: messagebox.showwarning(
-                    "CUDA Not Available", 
-                    "CUDA is not available. Falling back to CPU mode."))
+                    "CUDA Not Available", info_msg))
             device_type = "cpu"
         
         # Return CUDA config if CUDA is available and requested
