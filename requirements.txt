@@ -17,6 +17,3 @@ qwen-tts
 
 # Optional: Flash Attention (for faster GPU inference)
 # flash-attn --no-build-isolation
-
-# For building executable
-pyinstaller

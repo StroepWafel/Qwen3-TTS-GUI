@@ -14,6 +14,17 @@ An intuitive GUI app for Qwen3's TTS model
 ```bash
 pip install -r requirements.txt
 ```
+2. Optionally install Flash-Attenuation:
+```bash
+pip install flash-attn --no-build-isolation
+```
+3. You might want [CUDA](https://developer.nvidia.com/cuda-downloads) as well (Nvidia GPUs only):
+```plaintext
+https://developer.nvidia.com/cuda-downloads
+```
+4. Install the [correct version of PyTorch according to your system](https://pytorch.org/get-started/locally/)
+> [!IMPORTANT]  
+> Make sure you select `PyTorch Build: Stable`, `Your OS: <Your OS>`, `Package: Pip`, `Language: Python`, and `Compute Platform: <CPU or The version of CUDA installed if using CUDA>`
 
 ## Usage
 
