@@ -267,7 +267,7 @@ class QwenTTSGUI:
         else:
             # CPU configuration
             return {
-                "device": "cpu",
+                "device_map": "cpu",
                 "dtype": torch.float32,
                 "attn_implementation": "eager",
             }
