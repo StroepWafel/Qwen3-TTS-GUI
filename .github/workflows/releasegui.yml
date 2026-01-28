@@ -1,0 +1,107 @@
+name: Release Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_channel:
+        description: 'Type of release'
+        required: true
+        type: choice
+        options:
+        - Alpha
+        - Beta
+        - Dev
+        - Release
+      release_version:
+        description: 'Version of release (e.g. 1.0.0), make sure to use semver (https://semver.org/)'
+        required: true
+        type: string
+      release_summary:
+        description: 'Quick summary of release to append to title'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
+
+      - name: Install PyTorch (CUDA-enabled)
+        run: |
+          python -m pip install --upgrade pip
+          # Install CUDA-enabled PyTorch (CUDA 12.1)
+          # Note: GitHub Actions runners don't have GPUs, but this includes CUDA libraries
+          # so the built executable will support CUDA when run on machines with GPUs
+          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+      - name: Install requirements
+        run: |
+          pip install numpy sounddevice soundfile Pillow
+          pip install qwen-tts
+          pip install pyinstaller
+
+      - name: Run PyInstaller
+        run: |
+          python -m PyInstaller --clean --log-level=INFO qwen_tts_gui.spec
+
+      - name: Verify executable exists
+        run: |
+          if (Test-Path "dist\QwenTTS_GUI.exe") {
+            Write-Host "Executable built successfully"
+            $file = Get-Item "dist\QwenTTS_GUI.exe"
+            Write-Host "File size: $($file.Length / 1MB) MB"
+          } else {
+            Write-Host "ERROR: Executable not found!"
+            exit 1
+          }
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: QwenTTS_GUI_Build
+          path: dist/QwenTTS_GUI.exe
+          retention-days: 7
+          
+      - name: Set release flags
+        id: flags
+        run: |
+          $channel = "${{ github.event.inputs.release_channel }}"
+          if ($channel -eq "Release") {
+            "prerelease=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "draft=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } elseif ($channel -eq "Alpha" -or $channel -eq "Beta") {
+            "prerelease=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "draft=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
+            # Dev release
+            "prerelease=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "draft=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          }
+          
+      - name: Generate and Create Release
+        id: release
+        uses: stroepwafel/ai-release-notes@v1.0.0
+        with:
+          groq_api_key: ${{ secrets.GROQ_API_KEY }}
+          tag_name: v${{ github.event.inputs.release_version }}-${{ github.event.inputs.release_channel }}
+          release_name: "[${{ github.event.inputs.release_channel }}] v${{ github.event.inputs.release_version }} - ${{ github.event.inputs.release_summary }}"
+          draft: ${{ steps.flags.outputs.draft }}
+          prerelease: ${{ steps.flags.outputs.prerelease }}
+          files: dist/QwenTTS_GUI.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Display Release URL
+        run: |
+          echo "Release created: ${{ steps.release.outputs.release_url }}"
