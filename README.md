@@ -112,31 +112,38 @@ pyinstaller --noconfirm --onefile --windowed src/qwen_tts_gui.py
 - **CUDA selected but not available**:
   - Confirm you installed a CUDA-enabled PyTorch wheel (see the PyTorch selector above).
   - Update your NVIDIA driver, then restart your terminal (so PATH changes take effect).
-- `**CUDA error: no kernel image is available for execution on the device`**:
-  - This almost always means **your GPU’s compute capability isn’t supported by the PyTorch CUDA build you installed** (common with older NVIDIA GPUs).
+- **`CUDA error: no kernel image is available for execution on the device`**:
+  - This almost always means **your GPU’s compute capability isn’t supported by the PyTorch CUDA build you installed** (often happens with very old or very new GPUs).
   - Check what PyTorch sees:
 
 ```bash
 python -c "import torch; print('torch', torch.__version__); print('torch cuda', torch.version.cuda); print('available', torch.cuda.is_available()); print('gpu', torch.cuda.get_device_name(0) if torch.cuda.is_available() else None); print('cc', torch.cuda.get_device_capability(0) if torch.cuda.is_available() else None)"
 ```
 
-- Fix options:
-  - **If your GPU is old** (low compute capability): use **CPU mode** (recommended) or install an older PyTorch version that still supports your GPU.
-  - **If your GPU is new** but you installed an unusual CUDA build: reinstall PyTorch using a stable CUDA wheel from the official selector (commonly `cu121` / `cu126`).
-- Debugging tip (makes CUDA errors point to the real call site):
-  - PowerShell: `$env:CUDA_LAUNCH_BLOCKING=1`
-  - bash: `export CUDA_LAUNCH_BLOCKING=1`
+  - Fix options:
+    - **If your GPU is old** (low compute capability): use **CPU mode** (recommended) or install an older PyTorch version that still supports your GPU.
+    - **If your GPU is new** and you don’t see your compute capability in the “supported CUDA capabilities” list: install a newer PyTorch CUDA wheel (or nightly) that includes kernels for your GPU.
+    - **RTX 50‑series / Blackwell (`sm_120`, compute capability 12.0)**: install a CUDA **12.8+** PyTorch wheel (example: `cu128`).
+
+```bash
+pip uninstall -y torch torchvision torchaudio
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+```
+
+  - Debugging tip (makes CUDA errors point to the real call site):
+    - PowerShell: `$env:CUDA_LAUNCH_BLOCKING=1`
+    - bash: `export CUDA_LAUNCH_BLOCKING=1`
 - **FlashAttention install fails on Windows** (common):
   - The simplest fix is to **skip FlashAttention**; the app will fall back automatically.
   - If you need it, use **Python 3.11**, install **MSVC Build Tools**, and align your CUDA Toolkit version with `torch.version.cuda`.
   - If you want the least pain, install and run in **WSL2 (Ubuntu)** instead of native Windows.
-- `**HTTP Error 404` during FlashAttention install/build**:
+- **`HTTP Error 404` during FlashAttention install/build**:
   - This typically happens during a build-time download step. Retry the install, and ensure your network/proxy isn’t blocking GitHub/CDN downloads.
   - If it keeps happening, treat it as a sign to **skip FlashAttention on Windows** (or use WSL2).
 - **Microphone / audio device errors**:
   - Try switching the device to **CPU** first (to confirm the model loads), then troubleshoot audio separately.
   - On Windows, ensure microphone permissions are enabled for your Python installation/app.
-- `**ModuleNotFoundError: _tkinter` (Linux)**:
+- **`ModuleNotFoundError: _tkinter` (Linux)**:
   - Install your distro’s tkinter package (often `python3-tk`), then re-run the app.
 
 #### Known-good Windows setups
