@@ -3,3 +3,6 @@
 /build
 /dist
 /src/__pycache__
+*.mp3
+/mp3s
+/.venv
