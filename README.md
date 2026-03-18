@@ -1,4 +1,5 @@
 # Qwen3-TTS-GUI
+
 An intuitive GUI app for Qwen3's TTS model
 
 ## Features
@@ -32,13 +33,13 @@ git clone <REPO_URL>
 cd Qwen3-TTS-GUI
 ```
 
-2. Create and activate a virtual environment (recommended).
+1. Create and activate a virtual environment (recommended).
 
-Windows (PowerShell):
+Windows (CMD):
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate
 python -m pip install --upgrade pip
 ```
 
@@ -50,7 +51,7 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 ```
 
-3. Install **PyTorch** for your machine.
+1. Install **PyTorch** for your machine.
 
 - **CPU-only** (works everywhere):
 
@@ -65,7 +66,7 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 > [!IMPORTANT]
 > If you’re using CUDA, your PyTorch wheel must match the CUDA runtime you intend to use (e.g. cu118 / cu121). If CUDA is installed but PyTorch is CPU-only, the app will run in CPU mode.
 
-4. Install the remaining Python dependencies:
+1. Install the remaining Python dependencies:
 
 ```bash
 pip install -r requirements.txt
@@ -111,17 +112,31 @@ pyinstaller --noconfirm --onefile --windowed src/qwen_tts_gui.py
 - **CUDA selected but not available**:
   - Confirm you installed a CUDA-enabled PyTorch wheel (see the PyTorch selector above).
   - Update your NVIDIA driver, then restart your terminal (so PATH changes take effect).
+- `**CUDA error: no kernel image is available for execution on the device`**:
+  - This almost always means **your GPU’s compute capability isn’t supported by the PyTorch CUDA build you installed** (common with older NVIDIA GPUs).
+  - Check what PyTorch sees:
+
+```bash
+python -c "import torch; print('torch', torch.__version__); print('torch cuda', torch.version.cuda); print('available', torch.cuda.is_available()); print('gpu', torch.cuda.get_device_name(0) if torch.cuda.is_available() else None); print('cc', torch.cuda.get_device_capability(0) if torch.cuda.is_available() else None)"
+```
+
+- Fix options:
+  - **If your GPU is old** (low compute capability): use **CPU mode** (recommended) or install an older PyTorch version that still supports your GPU.
+  - **If your GPU is new** but you installed an unusual CUDA build: reinstall PyTorch using a stable CUDA wheel from the official selector (commonly `cu121` / `cu126`).
+- Debugging tip (makes CUDA errors point to the real call site):
+  - PowerShell: `$env:CUDA_LAUNCH_BLOCKING=1`
+  - bash: `export CUDA_LAUNCH_BLOCKING=1`
 - **FlashAttention install fails on Windows** (common):
   - The simplest fix is to **skip FlashAttention**; the app will fall back automatically.
   - If you need it, use **Python 3.11**, install **MSVC Build Tools**, and align your CUDA Toolkit version with `torch.version.cuda`.
   - If you want the least pain, install and run in **WSL2 (Ubuntu)** instead of native Windows.
-- **`HTTP Error 404` during FlashAttention install/build**:
+- `**HTTP Error 404` during FlashAttention install/build**:
   - This typically happens during a build-time download step. Retry the install, and ensure your network/proxy isn’t blocking GitHub/CDN downloads.
   - If it keeps happening, treat it as a sign to **skip FlashAttention on Windows** (or use WSL2).
 - **Microphone / audio device errors**:
   - Try switching the device to **CPU** first (to confirm the model loads), then troubleshoot audio separately.
   - On Windows, ensure microphone permissions are enabled for your Python installation/app.
-- **`ModuleNotFoundError: _tkinter` (Linux)**:
+- `**ModuleNotFoundError: _tkinter` (Linux)**:
   - Install your distro’s tkinter package (often `python3-tk`), then re-run the app.
 
 #### Known-good Windows setups
@@ -142,6 +157,7 @@ pip install -r requirements.txt
 ## Usage
 
 Run the GUI application:
+
 ```bash
 python src/qwen_tts_gui.py
 ```
@@ -154,8 +170,8 @@ python src/qwen_tts_gui.py
 2. Enter a name for your voice
 3. Select your preferred device (CUDA/CPU)
 4. Choose training method:
-   - **From Audio File + Transcript**: Browse for a WAV file and enter the transcript
-   - **Record Audio**: Use the built-in recorder with a pre-made script
+  - **From Audio File + Transcript**: Browse for a WAV file and enter the transcript
+  - **Record Audio**: Use the built-in recorder with a pre-made script
 5. Click **Train Voice** to start training
 6. The trained voice will be saved as `{voice_name}.pt`
 
@@ -174,6 +190,5 @@ python src/qwen_tts_gui.py
 - Flash Attention 2 will be used automatically if available, otherwise falls back to SDPA
 - CPU mode uses float32 precision and eager attention implementation
 - GPU mode uses bfloat16 precision for better performance
-
 
 This readme and the comments in the code were created with the assistance of AI
